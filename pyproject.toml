@@ -1,0 +1,21 @@
+[project]
+name = "Raphlit"
+version = "0.1.0"
+description = "A bundle of streamlit widgets for vizualization and chatbots."
+authors = [
+    {name = "Raph",email = "94909118+Ryustiel@users.noreply.github.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "pydantic (>=2.10.6,<3.0.0)",
+    "streamlit (>=1.42.2,<2.0.0)",
+    "networkx (>=3.4.2,<4.0.0)",
+    "streamlit-plotly-events (>=0.0.6,<0.0.7)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

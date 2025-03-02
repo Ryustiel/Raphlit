@@ -295,31 +295,32 @@ class ExampleInteractiveGraph(InteractiveGraph):
     and processes node selection by storing the selected node's label.
     """
     def __init__(self):
-        super().__init__()
+        super().__init__(on_select=[])  # Define callbacks
 
     def build_nodes(self) -> GraphItems:
-        
-        with st.spinner("Building nodes..."):
-            import time
-            time.sleep(3)
 
         items = GraphItems(
             node_config = {
-                "default": NodeConfig(color="orange", size=20)
+                "default": NodeConfig(color="orange", size=20),
+                "selected": NodeConfig(color="red", size=30),
             },
             edge_config = {
-                "default": EdgeConfig(width=5)
+                "default": EdgeConfig(width=5),
+                "selected": EdgeConfig(width=10),
             }
         )
-        items.add_node("A", value="A Value", config="default", label="A")
-        items.add_node("B", value="B Value", config="default", label="B")
-        items.add_edge("A", "B", config="default")
+        items.add_node("A", value="A Value", label="A", config="selected" if self.selected_external_id == "A" else "default")
+        items.add_node("B", value="B Value", label="B", config="selected" if self.selected_external_id == "B" else "default")
+        items.add_node("C", value="C Value", label="C", config="selected" if self.selected_external_id == "C" else "default")
+        items.add_edge("A", "B", config="selected" if self.selected_external_id == "A" or self.selected_external_id == "B" else "default")
 
         return items
 
     def on_update(self):
-        self.graph_items = self.build_nodes()
+        with st.spinner("Fetching nodes..."): 
+            self.graph_items = self.build_nodes()
         self.figure = self.compute_figure()
+
 
 
 def display_interactive_graph_example():

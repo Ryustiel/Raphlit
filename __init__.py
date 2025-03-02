@@ -1,8 +1,17 @@
-"""
-A set of components for building Streamlit apps.
-"""
 
-from ._persistent_item import PersistentItem
-from .pydantic_form import PydanticForm
-from .interactive_graph import InteractiveGraph, GraphItems, NodeConfig, EdgeConfig, display_interactive_graph_example
-from .langgraph_chat import LangGraphChat
+__author__ = "Raphael Nguyen"
+__copyright__ = "© 2025 Raphael Nguyen"
+__license__ = "MIT"
+__version__ = "1.0.0"
+
+success = False
+try:
+    from src import *
+except ModuleNotFoundError as e:
+    try:
+        from .src import *
+        success = True
+    except Exception as f:
+        raise f
+    if not success:
+        raise e
