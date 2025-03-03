@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "raphlit"
+name = "Raphlit"
 version = "0.1.0"
 description = "A bundle of Streamlit widgets for visualization and chatbots."
 authors = ["Raph <raph.nyn@gmail.com>"]
