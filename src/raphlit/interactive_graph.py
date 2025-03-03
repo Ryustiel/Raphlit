@@ -17,6 +17,7 @@ from abc import abstractmethod
 import streamlit as st
 
 from ._persistent_item import PersistentItem
+from .rerun_flag import set_rerun_flag
 from streamlit_plotly_events import plotly_events
 
 import networkx as nx
@@ -146,6 +147,7 @@ class InteractiveGraph(PersistentItem):
             key = plotly_key,
             override_height=height,
         )
+
         if selected_points:
             self.select_node(selected_points[0]["pointNumber"], rerun=True)
 
@@ -171,7 +173,7 @@ class InteractiveGraph(PersistentItem):
                 If True, selection event is triggered 
                 even is the new selection is the same as the current.
             rerun (bool):
-                Whether this function should trigger a streamlit rerun.
+                Whether this function should set the streamlit rerun flag.
                 This parameter is intended for internal use.
         """
         self._selected_node = node_id
@@ -189,7 +191,7 @@ class InteractiveGraph(PersistentItem):
                 callback(self.selected_value, event)
 
             if rerun:
-                st.rerun()
+                set_rerun_flag()
 
     def compute_figure(self, 
             figure_height: int = 600,

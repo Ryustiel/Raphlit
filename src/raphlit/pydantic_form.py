@@ -15,17 +15,12 @@ class PydanticForm(BaseModel, PersistentItem):
     An instance of this model can be edited at any point in the code and the changes will be reflected in the form.
     """
     
-    def update(self, *args, **kwargs):
+    def update(self, replacement_model: Optional[BaseModel] = None, **kwargs):
         """
         Update the form with the given keyword arguments or (non keyword) instance of the current model to update from.
         """
-        if args:
-            if len(args) > 1:
-                raise ValueError("Too many positional arguments. There can be only one argument.")
-            elif not isinstance(args[0], BaseModel):
-                raise ValueError("Non keyword argument should be a PydanticForm.")
-            else:
-                self.update(**args[0].model_dump(exclude_unset=True))
+        if replacement_model:
+            self.update(**replacement_model.model_dump(exclude_unset=True))
         else:
             for key, value in kwargs.items():
                 setattr(self, key, value)

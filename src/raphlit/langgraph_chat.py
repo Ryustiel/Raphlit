@@ -4,7 +4,7 @@ from typing import (
 )
 from abc import abstractmethod
 from raphlib.graph import Graph, BaseState, interrupt
-from raphlib import ToolCallEvent, ToolCallInitialization, ChatHistory
+from raphlib import ToolCallStream, ToolCallInitialization, ChatHistory
 from langchain_core.messages import AIMessage, AIMessageChunk
 
 import streamlit as st
@@ -50,6 +50,10 @@ class LangGraphChat(PersistentItem):
 
         if self.update:
 
+            with st.spinner("RUNNING???", show_time=True):
+                import time
+                time.sleep(3)
+
             # Stream tool calls
             stream = self.graph.stream(self.update) if isinstance(self.update, str) else self.graph.stream()  # First run or not
             event = True
@@ -62,7 +66,7 @@ class LangGraphChat(PersistentItem):
                     if isinstance(event, ToolCallInitialization):
                         spinner = f"Running {event.tool_name}"
 
-                    elif isinstance(event, ToolCallEvent):
+                    elif isinstance(event, ToolCallStream):
                         spinner = str(event.content)
 
                     elif isinstance(event, AIMessageChunk) and event.content:
