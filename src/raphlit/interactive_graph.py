@@ -20,6 +20,7 @@ from ._persistent_item import PersistentItem
 from .rerun_flag import set_rerun_flag
 from streamlit_plotly_events import plotly_events
 
+import random
 import networkx as nx
 import plotly.graph_objects as go
 
@@ -102,9 +103,9 @@ class InteractiveGraph(PersistentItem):
         self.graph_items = graph_items or GraphItems()
         self.figure: go.Figure = None
 
-        self._selected_node: Optional[int] = None  # A temporary and local index to the selected node. NOTE : It becomes invalid when graph_items is rebuilt.
-        self.selected_value: Any = None  # This one remains valid across reruns
-        self.selected_external_id: Any = None
+        self._selected_node: Optional[List[int]] = None  # A temporary and local index to the selected node. NOTE : It becomes invalid when graph_items is rebuilt.
+        self.selected_values: List[Any] = None  # This one remains valid across reruns
+        self.selected_external_ids: List[Any] = None
 
         self._update: bool = True  # Triggers update event after the graph is rerun
         
@@ -129,7 +130,7 @@ class InteractiveGraph(PersistentItem):
 
     # ================================================================== INTERACTION AND DISPLAY LOGIC
 
-    def display(self, height=600):
+    def display(self, height=650):
         """
         Displays the graph and process click events.
         """
@@ -153,7 +154,8 @@ class InteractiveGraph(PersistentItem):
 
     def select_node(
             self, 
-            node_id: int | None = None, 
+            ids: int | List[int] | None = None,
+            external_ids: Any | List[Any] | None = None, 
             event: str = "default", 
             ignore_current: bool = False,
             rerun: bool = False
@@ -163,9 +165,11 @@ class InteractiveGraph(PersistentItem):
         If you use this function outside the graph you should schedule the rerun however suits you.
 
         Parameters:
-            node_id (int | None): 
-                The id of the node to select.
-                Setting it to None deselects the node.
+            ids (List[int], int, None): 
+                The ids of the nodes to select.
+                Setting both ids and external_ids to None deselects all.
+            external_ids (List[Any], Any, None):
+                The external ids of the nodes to select.
             event (str):
                 The event that triggered the selection.
             ignore_current (bool):
@@ -176,19 +180,29 @@ class InteractiveGraph(PersistentItem):
                 Whether this function should set the streamlit rerun flag.
                 This parameter is intended for internal use.
         """
-        self._selected_node = node_id
+        if external_ids is not None:
+            if ids is not None:
+                raise ValueError("Cannot provide both ids and external_ids")
+            if isinstance(external_ids, str):
+                external_ids = [external_ids]
+            ids = [self.graph_items.get_node_id(external_id=external_id) for external_id in external_ids]
+        else:
+            if isinstance(ids, int):
+                ids = [ids]
 
-        node = self.graph_items.get_node(node_id) if node_id is not None else None
-        self.selected_value = node.value if node else None
-        external_id = node.external_id if node else None
+        self._selected_node = ids
+
+        nodes = [self.graph_items.get_node(node_id) for node_id in ids] if ids is not None else []
+        self.selected_values = [node.value for node in nodes] if nodes else []
+        external_ids = [node.external_id for node in nodes] if nodes else []
     
-        if self.selected_external_id != external_id or ignore_current:  # Worth updating the graph
+        if self.selected_external_ids != external_ids or ignore_current:  # Worth updating the graph
         
-            self.selected_external_id = external_id
+            self.selected_external_ids = external_ids
             self._update = True
 
             for callback in self.on_select:
-                callback(self.selected_value, event)
+                callback(self.selected_values, event)
 
             if rerun:
                 set_rerun_flag()
@@ -211,7 +225,7 @@ class InteractiveGraph(PersistentItem):
                 A function that produces coordiniates for each node in a networkx digraph structure.
                 Defaults to networkx' spring_layout with a random seed.
         """
-        layout = layout or (lambda digraph: [pos for id, pos in nx.spring_layout(digraph, dim=3, seed=28).items()])
+        layout = layout or (lambda digraph: [pos for id, pos in nx.spring_layout(digraph, dim=3, seed=random.randint(1, 10^3)).items()])
 
         # Compute node positions
         positioning: nx.DiGraph = nx.DiGraph()
@@ -311,10 +325,10 @@ class ExampleInteractiveGraph(InteractiveGraph):
                 "selected": EdgeConfig(width=10),
             }
         )
-        items.add_node("A", value="A Value", label="A", config="selected" if self.selected_external_id == "A" else "default")
-        items.add_node("B", value="B Value", label="B", config="selected" if self.selected_external_id == "B" else "default")
-        items.add_node("C", value="C Value", label="C", config="selected" if self.selected_external_id == "C" else "default")
-        items.add_edge("A", "B", config="selected" if self.selected_external_id == "A" or self.selected_external_id == "B" else "default")
+        items.add_node("A", value="A Value", label="A", config="selected" if self.selected_external_ids and self.selected_external_ids[0] == "A" else "default")
+        items.add_node("B", value="B Value", label="B", config="selected" if self.selected_external_ids and self.selected_external_ids[0] == "B" else "default")
+        items.add_node("C", value="C Value", label="C", config="selected" if self.selected_external_ids and self.selected_external_ids[0] == "C" else "default")
+        items.add_edge("A", "B", config="selected" if self.selected_external_ids and (self.selected_external_ids[0] == "A" or self.selected_external_ids[0] == "B") else "default")
 
         return items
 
@@ -330,5 +344,5 @@ def display_interactive_graph_example():
     graph = ExampleInteractiveGraph.st("interactive_graph_example")
     graph.display()
     
-    if graph.selected_value:
-        st.write(graph.selected_value)
+    if graph.selected_values:
+        st.write(graph.selected_values)
