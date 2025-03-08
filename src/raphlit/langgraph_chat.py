@@ -19,6 +19,7 @@ class LangGraphChat(PersistentItem):
     def __init__(self):
         self.update = True
         self.graph = None
+        self.chat_icons = {}  # A mapping of message from the message history to an icon
         self.create_graph()
 
 
@@ -41,18 +42,10 @@ class LangGraphChat(PersistentItem):
         # Display messages from the history
         with message_area:
             for message in self.graph.state.history.messages:
-                if message.type == "human":
-                    with st.chat_message("human"):
-                        st.markdown(message.content)
-                elif message.type == "ai":
-                    with st.chat_message("ai"):
-                        st.markdown(message.content)
+                with st.chat_message(message.type, avatar = self.chat_icons.get(message.type, None)):
+                    st.markdown(message.content)
 
         if self.update:
-
-            with st.spinner("RUNNING???", show_time=True):
-                import time
-                time.sleep(3)
 
             # Stream tool calls
             stream = self.graph.stream(self.update) if isinstance(self.update, str) else self.graph.stream()  # First run or not
@@ -83,7 +76,7 @@ class LangGraphChat(PersistentItem):
                                     # raise ValueError(f"Unexpected event while streaming response : {type(ev)}")
 
                         with message_area: 
-                            with st.chat_message("ai"):
+                            with st.chat_message("ai", avatar = self.chat_icons.get("ai", None)):
                                 st.write_stream(response_streaming)
 
                 with st.spinner(spinner, show_time=True):

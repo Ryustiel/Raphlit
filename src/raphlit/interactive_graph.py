@@ -102,12 +102,14 @@ class InteractiveGraph(PersistentItem):
         self.on_select = on_select
         self.graph_items = graph_items or GraphItems()
         self.figure: go.Figure = None
-
-        self._selected_node: Optional[List[int]] = None  # A temporary and local index to the selected node. NOTE : It becomes invalid when graph_items is rebuilt.
+        
         self.selected_values: List[Any] = None  # This one remains valid across reruns
         self.selected_external_ids: List[Any] = None
 
         self._update: bool = True  # Triggers update event after the graph is rerun
+
+        # This one is solely used for handling the user click events with the plotly_events widget
+        self._cached_plotly_selection: Optional[List[Dict[str, Any]]] = None
         
     # ================================================================== SUBCLASS INTERFACE
 
@@ -138,19 +140,35 @@ class InteractiveGraph(PersistentItem):
 
         if self._update:
             self.on_update()
-            self._selected_node = None
-            st.session_state[plotly_key] = None
             self._update = False
+            # self._cached_plotly_selection = None
+            # st.session_state[plotly_key] = None
 
-        selected_points = plotly_events(
-            plot_fig=self.figure,
-            click_event=True,
-            key = plotly_key,
-            override_height=height,
+        selected_points = self.process_plotly_selection(
+            plotly_events(
+                plot_fig=self.figure,
+                click_event=True,
+                key = plotly_key,
+                override_height=height,
+            )
         )
 
         if selected_points:
-            self.select_node(selected_points[0]["pointNumber"], rerun=True)
+            self.select_node(selected_points, rerun=True)
+
+    def process_plotly_selection(self, plotly_selection: List[Dict[str, Any]] | None) -> Optional[List[int]]:
+        """
+        Handles the value of the plotly_events widget.
+        If the value was updated, causes an update to the graph.
+        """
+        if plotly_selection:
+            if (
+                self._cached_plotly_selection is None
+                or plotly_selection[0]["pointNumber"] != self._cached_plotly_selection[0]["pointNumber"]
+            ):
+                self._cached_plotly_selection = plotly_selection
+                return [plotly_selection[0]["pointNumber"]]
+        return None
 
     def select_node(
             self, 
@@ -189,8 +207,6 @@ class InteractiveGraph(PersistentItem):
         else:
             if isinstance(ids, int):
                 ids = [ids]
-
-        self._selected_node = ids
 
         nodes = [self.graph_items.get_node(node_id) for node_id in ids] if ids is not None else []
         self.selected_values = [node.value for node in nodes] if nodes else []
