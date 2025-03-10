@@ -50,40 +50,29 @@ class LangGraphChat(PersistentItem):
             # Stream tool calls
             stream = self.graph.stream(self.update) if isinstance(self.update, str) else self.graph.stream()  # First run or not
             event = True
-            spinner = "Running..."
 
             while event is not None:
 
-                with st.spinner(spinner, show_time=True):
+                if isinstance(event, AIMessageChunk) and event.content:
 
-                    if isinstance(event, ToolCallInitialization):
-                        spinner = f"Running {event.tool_name}"
+                    def response_streaming():
+                        yield event.content
+                        for ev in stream:
+                            if isinstance(ev, AIMessageChunk):
+                                yield ev.content
+                            elif isinstance(ev, AIMessage):
+                                break  # Can be skipped safely
+                            else:
+                                break  # Another tool is being run
+                                # raise ValueError(f"Unexpected event while streaming response : {type(ev)}")
 
-                    elif isinstance(event, ToolCallStream):
-                        spinner = str(event.content)
+                    with message_area: 
+                        with st.chat_message("ai", avatar = self.chat_icons.get("ai", None)):
+                            st.write_stream(response_streaming)
 
-                    elif isinstance(event, AIMessageChunk) and event.content:
-
-                        def response_streaming():
-                            yield event.content
-                            for ev in stream:
-                                if isinstance(ev, AIMessageChunk):
-                                    yield ev.content
-                                elif isinstance(ev, AIMessage):
-                                    break  # Can be skipped safely
-                                else:
-                                    break  # Another tool is being run
-                                    # raise ValueError(f"Unexpected event while streaming response : {type(ev)}")
-
-                        with message_area: 
-                            with st.chat_message("ai", avatar = self.chat_icons.get("ai", None)):
-                                st.write_stream(response_streaming)
-
-                with st.spinner(spinner, show_time=True):
-
-                    event = None
-                    for event in stream: 
-                        break
+                event = None
+                for event in stream: 
+                    break
 
         # Display Chat Input
         self.update = st.chat_input(self.graph.state.input_hint, key=f"{self.key}_chat_input")
