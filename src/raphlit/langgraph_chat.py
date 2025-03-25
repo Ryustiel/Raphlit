@@ -1,6 +1,7 @@
 
 from typing import (
     Any,
+    Generator,
 )
 from abc import abstractmethod
 from raphlib.graph import Graph, BaseState, interrupt
@@ -8,6 +9,7 @@ from raphlib import ToolCallStream, ToolCallInitialization, ChatHistory
 from langchain_core.messages import AIMessage, AIMessageChunk
 
 import streamlit as st
+from streamlit.delta_generator import DeltaGenerator
 from ._persistent_item import PersistentItem
 
 
@@ -33,6 +35,27 @@ class LangGraphChat(PersistentItem):
             input_hint: str = "Write something..."
         self.graph = Graph[State]("node", state=State)
         raise NotImplementedError("You must implement the create_graph method in your subclass.")
+    
+    def process_event(self, event: Any, stream: Generator[Any, None], message_area: DeltaGenerator):
+        """
+        Process an event from the stream.
+        """
+        if isinstance(event, AIMessageChunk) and event.content:
+
+            def response_streaming():
+                yield event.content
+                for ev in stream:
+                    if isinstance(ev, AIMessageChunk):
+                        yield ev.content
+                    elif isinstance(ev, AIMessage):
+                        break  # Can be skipped safely
+                    else:
+                        break  # Another tool is being run
+                        # raise ValueError(f"Unexpected event while streaming response : {type(ev)}")
+
+            with message_area: 
+                with st.chat_message("ai", avatar = self.chat_icons.get("ai", None)):
+                    st.write_stream(response_streaming)
 
 
     def display(self, height: int = None, border: bool = False):
@@ -53,22 +76,7 @@ class LangGraphChat(PersistentItem):
 
             while event is not None:
 
-                if isinstance(event, AIMessageChunk) and event.content:
-
-                    def response_streaming():
-                        yield event.content
-                        for ev in stream:
-                            if isinstance(ev, AIMessageChunk):
-                                yield ev.content
-                            elif isinstance(ev, AIMessage):
-                                break  # Can be skipped safely
-                            else:
-                                break  # Another tool is being run
-                                # raise ValueError(f"Unexpected event while streaming response : {type(ev)}")
-
-                    with message_area: 
-                        with st.chat_message("ai", avatar = self.chat_icons.get("ai", None)):
-                            st.write_stream(response_streaming)
+                self.process_event(event, stream=stream, message_area=message_area)
 
                 event = None
                 for event in stream: 
