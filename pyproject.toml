@@ -8,7 +8,7 @@ packages = [{ include = "raphlit", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<4.0"
-pydantic = "<=2.7.4"
+pydantic = ">=2.7.4,<3.0.0"
 streamlit = ">=1.42.2,<2.0.0"
 networkx = ">=3.4.2,<4.0.0"
 streamlit-plotly-events = ">=0.0.6,<0.0.7"
